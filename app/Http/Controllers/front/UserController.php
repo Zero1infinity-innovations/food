@@ -8,14 +8,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
-use Session;
+// use Session;
 use Auth;
 use App\User;
 use App\Ratting;
 use App\About;
 use App\Transaction;
 use App\Cart;
-use Validator;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Validator;
+// use Validator;
 
 class UserController extends Controller
 {
@@ -37,7 +39,10 @@ class UserController extends Controller
 
     public function login(Request $request)
     {
-        $login=User::where('email',$request['email'])->where('type','=','2')->first();
+        // dd($request->email);
+        $login = User::where('type', '2')->where(function($q) use ($request) {
+            $q->where('email', $request->email)->orWhere('mobile',  $request->email);
+        })->first();
 
         $getdata=User::select('referral_amount')->where('type','1')->first();
         
@@ -63,39 +68,42 @@ class UserController extends Controller
                     } else {
                         return Redirect::back()->with('danger', 'Your account has been blocked by Admin');
                     }
-                } else {
+                } else{
+                    return Redirect::back()->with('danger', 'Your account is not verified yet');
+                } 
+                // else {
 
-                    $otp = rand ( 100000 , 999999 );
-                    try{
+                //     $otp = rand ( 100000 , 999999 );
+                //     try{
 
-                        $title='Email Verification Code';
-                        $email=$request->email;
-                        $data=['title'=>$title,'email'=>$email,'otp'=>$otp];
+                //         $title='Email Verification Code';
+                //         $email=$request->email;
+                //         $data=['title'=>$title,'email'=>$email,'otp'=>$otp];
 
-                        Mail::send('Email.emailverification',$data,function($message)use($data){
-                            $message->from(env('MAIL_USERNAME'))->subject($data['title']);
-                            $message->to($data['email']);
-                        } );
+                //         Mail::send('Email.emailverification',$data,function($message)use($data){
+                //             $message->from(env('MAIL_USERNAME'))->subject($data['title']);
+                //             $message->to($data['email']);
+                //         } );
 
-                        if (env('Environment') == 'sendbox') {
-                            session ( [
-                                'email' => $login->email,
-                                'password' => $login->password,
-                                'otp' => $otp,
-                            ] );
-                        } else {
-                            session ( [
-                                'email' => $login->email,
-                                'password' => $login->password,
-                            ] );
-                        }
+                //         if (env('Environment') == 'sendbox') {
+                //             session ( [
+                //                 'email' => $login->email,
+                //                 'password' => $login->password,
+                //                 'otp' => $otp,
+                //             ] );
+                //         } else {
+                //             session ( [
+                //                 'email' => $login->email,
+                //                 'password' => $login->password,
+                //             ] );
+                //         }
 
-                    }catch(\Swift_TransportException $e){
-                        $response = $e->getMessage() ;
-                        return Redirect::back()->with('danger', 'Something went wrong while sending email Please try again...');
-                    }
-                    return Redirect::to('/email-verify')->with('success', "Email has been sent to your registered email address");
-                }
+                //     }catch(\Swift_TransportException $e){
+                //         $response = $e->getMessage() ;
+                //         return Redirect::back()->with('danger', 'Something went wrong while sending email Please try again...');
+                //     }
+                //     return Redirect::to('/email-verify')->with('success', "Email has been sent to your registered email address");
+                // }
             } else {
                 return Redirect::back()->with('danger', 'Password is incorrect');
             }
@@ -109,7 +117,6 @@ class UserController extends Controller
         if (Session::get('facebook_id') OR Session::get('google_id')) {
             $validation = Validator::make($request->all(),[
                 'name' => 'required',
-                'email' => 'required',
                 'mobile' => 'required',
                 'accept' =>'accepted'
             ]);
@@ -132,16 +139,16 @@ class UserController extends Controller
                         try{
                             $otp = rand ( 100000 , 999999 );
 
-                            $title='Email Verification Code';
-                            $email=$request->email;
-                            $data=['title'=>$title,'email'=>$email,'otp'=>$otp];
+                            // $title='Email Verification Code';
+                            // $email=$request->email;
+                            // $data=['title'=>$title,'email'=>$email,'otp'=>$otp];
 
-                            Mail::send('Email.emailverification',$data,function($message)use($data){
-                                $message->from(env('MAIL_USERNAME'))->subject($data['title']);
-                                $message->to($data['email']);
-                            } );
+                            // Mail::send('Email.emailverification',$data,function($message)use($data){
+                            //     $message->from(env('MAIL_USERNAME'))->subject($data['title']);
+                            //     $message->to($data['email']);
+                            // } );
                             
-                            User::where('email', $request->email)->update(['otp'=>$otp,'mobile'=>$request->mobile,'referral_code'=>$referral_code]);
+                            User::where('email', $request->email)->update(['otp'=>$otp, 'mobile'=>$request->mobile,'referral_code'=>$referral_code]);
 
                             if ($request['referral_code'] != "") {
                                 $getdata=User::select('referral_amount')->where('type','1')->get()->first();
@@ -179,19 +186,8 @@ class UserController extends Controller
                                     $to_Wallet->username = $checkreferral->name;
                                     $to_Wallet->save();
                                 }
-                            }
-
-                            if (env('Environment') == 'sendbox') {
-                                session ( [
-                                    'email' => $request->email,
-                                    'otp' => $otp,
-                                ] );
-                            } else {
-                                session ( [
-                                    'email' => $request->email,
-                                ] );
-                            }
-                            return Redirect::to('/email-verify')->with('success', 'Email has been sent to your registered email address');  
+                            } 
+                            return Redirect::to('/signin')->with('success', 'Now you can login with your email and mobile no bothe'); 
                         }catch(\Swift_TransportException $e){
                             $response = $e->getMessage() ;
                             return Redirect::back()->with('danger', 'Something went wrong while sending email Please try again...');
@@ -208,7 +204,7 @@ class UserController extends Controller
         } else {
             $validation = Validator::make($request->all(),[
                 'name' => 'required',
-                'email' => 'required|unique:users',
+                'email' => 'unique:users',
                 'mobile' => 'required|unique:users',
                 'password' => 'required|confirmed',
                 'accept' =>'accepted'
@@ -228,14 +224,14 @@ class UserController extends Controller
                 if (@$checkreferral->referral_code == $request['referral_code']) {
 
                     try{
-                        $title='Email Verification Code';
-                        $email=$request->email;
-                        $data=['title'=>$title,'email'=>$email,'otp'=>$otp];
+                        // $title='Email Verification Code';
+                        // $email=$request->email;
+                        // $data=['title'=>$title,'email'=>$email,'otp'=>$otp];
 
-                        Mail::send('Email.emailverification',$data,function($message)use($data){
-                            $message->from(env('MAIL_USERNAME'))->subject($data['title']);
-                            $message->to($data['email']);
-                        } );
+                        // Mail::send('Email.emailverification',$data,function($message)use($data){
+                        //     $message->from(env('MAIL_USERNAME'))->subject($data['title']);
+                        //     $message->to($data['email']);
+                        // } );
 
                         $user = new User;
                         $user->name =$request->name;
@@ -246,6 +242,7 @@ class UserController extends Controller
                         $user->otp=$otp;
                         $user->type ='2';
                         $user->referral_code=$referral_code;
+                        $user->is_verified = '1';
                         $user->password =Hash::make($request->password);
                         $user->save();
 
@@ -287,17 +284,17 @@ class UserController extends Controller
                             }
                         }
 
-                        if (env('Environment') == 'sendbox') {
-                            session ( [
-                                'email' => $request->email,
-                                'otp' => $otp,
-                            ] );
-                        } else {
-                            session ( [
-                                'email' => $request->email,
-                            ] );
-                        }
-                        return Redirect::to('/email-verify')->with('success', 'Email has been sent to your registered email address');  
+                        // if (env('Environment') == 'sendbox') {
+                        //     session ( [
+                        //         'email' => $request->email,
+                        //         'otp' => $otp,
+                        //     ] );
+                        // } else {
+                        //     session ( [
+                        //         'email' => $request->email,
+                        //     ] );
+                        // }
+                        return Redirect::to('/signin')->with('success', 'Now you can login with your email and mobile no bothe');  
                     }catch(\Swift_TransportException $e){
                         $response = $e->getMessage() ;
                         return Redirect::back()->with('danger', 'Something went wrong while sending email Please try again...');
@@ -312,7 +309,7 @@ class UserController extends Controller
 
     public function changePassword(request $request)
     {
-        $validation = \Validator::make($request->all(), [
+        $validation = Validator::make($request->all(), [
             'oldpassword'=>'required|min:6',
             'newpassword'=>'required|min:6',
             'confirmpassword'=>'required_with:newpassword|same:newpassword|min:6',
@@ -339,7 +336,7 @@ class UserController extends Controller
         {
             $login=User::where('id','=',Session::get('id'))->first();
 
-            if(\Hash::check($request->oldpassword,$login->password)){
+            if(Hash::check($request->oldpassword,$login->password)){
                 $data['password'] = Hash::make($request->newpassword);
                 User::where('id', Session::get('id'))->update($data);
                 Session::flash('message', '<div class="alert alert-success"><strong>Success!</strong> Password has been changed.!! </div>');
@@ -357,7 +354,7 @@ class UserController extends Controller
 
     public function addreview(request $request)
     {
-        $validation = \Validator::make($request->all(), [
+        $validation = Validator::make($request->all(), [
             'user_id' => 'required|unique:ratting',
             'ratting'=>'required',
             'comment'=>'required',

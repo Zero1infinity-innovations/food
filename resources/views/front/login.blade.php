@@ -58,7 +58,7 @@
         </div>
         <form id="login" action="{{ URL::to('/signin/login') }}" method="post">
             @csrf
-            <input type="email" name="email" id="email" placeholder="Email" class="w-100" required="">
+            <input type="text" name="email" id="email" placeholder="Email" class="w-100" required="">
             <input type="password" name="password" id="password" placeholder="Password" class="w-100" required="">
             <button type="submit" class="btn w-100">Login</button>
             <a href="{{ url('auth/google') }}" class="btn w-50 mt-3" style="background-color: #fff;">
