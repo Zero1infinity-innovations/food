@@ -418,7 +418,9 @@ class UserController extends Controller
             return response()->json(["status"=>0,"message"=>"Password is required"],400);
         }
         
-        $login=User::where('email',$request['email'])->where('type','=','2')->first();
+        $login = User::where('type', '2')->where(function($q) use ($request) {
+            $q->where('email', $request->email)->orWhere('mobile',  $request->email);
+        })->first();
 
         if(!empty($login))
         {
